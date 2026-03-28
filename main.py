@@ -1,25 +1,20 @@
-from agent_manager import get_3d_texture
+from agent_manager import get_3d_texture, generate_level_from_visual, get_level_music
 
 def main():
     print("========================================")
-    print("🧙‍♂️ Welcome to the Gemini Dungeon Master 🧙‍♂️")
+    print("🧙‍♂️ GEMINI MULTIMODAL WORLD-BUILDER 🧙‍♂️")
     print("========================================")
-    print("Godot is waiting for your textures...\n")
     
     while True:
-        theme = input("Enter a new Dungeon Theme (or type 'q' to quit): ")
+        theme = input("\nEnter a Theme (e.g. 'nanobanana station'): ").strip()
+        if theme.lower() == 'q': break
         
-        if theme.lower() == 'q':
-            print("Shutting down...")
-            break
-            
-        print(f"\n✨ Generating '{theme}' environment...")
-        
-        # Tell Gemini to make both textures
-        get_3d_texture(theme, "wall")
-        get_3d_texture(theme, "floor")
-        
-        print(f"\n🎉 Done! Go check Godot, the room should be updated!\n")
+        print(f"\n✨ Manifesting '{theme}'...")
+        if generate_level_from_visual(theme):
+            get_3d_texture(theme, "wall")
+            get_3d_texture(theme, "floor")
+            get_level_music(theme) 
+            print(f"\n🎉 Everything is ready for Godot!")
 
 if __name__ == "__main__":
     main()

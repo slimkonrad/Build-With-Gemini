@@ -39,3 +39,26 @@ shape = SubResource("CapsuleShape3D_rk51b")
 
 [node name="Camera3D" type="Camera3D" parent="Player" unique_id=195113647]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+
+[node name="LevelMusicPlayer" type="AudioStreamPlayer" parent="." unique_id=173385136]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1218433668]
+
+[node name="Quit Button" type="Button" parent="CanvasLayer" unique_id=1712263728]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -46.0
+offset_top = -15.5
+offset_right = 46.0
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "Quit Game"
+
+[node name="OrbLabel" type="Label" parent="CanvasLayer" unique_id=1365218109]
+offset_right = 40.0
+offset_bottom = 23.0
+text = "Orb Counter "
