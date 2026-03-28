@@ -1,6 +1,9 @@
 import os
 import re
 import json
+import math
+from io import BytesIO
+from PIL import Image, ImageFilter
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
@@ -8,38 +11,34 @@ from dotenv import load_dotenv
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Ensure this name is correct for your folder tree
 GODOT_FOLDER = "dungeon-gemini--game-3d" 
 
 def get_level_music(theme):
     os.makedirs(GODOT_FOLDER, exist_ok=True)
     filename = os.path.join(GODOT_FOLDER, "level_music.mp3")
-    print(f"🎵 Bard: Composing music for '{theme}'...")
     try:
         res = client.models.generate_content(
             model="lyria-3-clip-preview",
-            contents=[f"Atmospheric game loop: {theme}. Gritty, moody, and atmospheric."],
+            contents=[f"Atmospheric game loop: {theme}. Gritty, moody."],
             config=types.GenerateContentConfig(response_modalities=["AUDIO"])
         )
         for part in res.parts:
             if part.inline_data:
                 with open(filename, "wb") as f:
                     f.write(part.inline_data.data)
-                print(f"✅ Music Saved")
                 return True
         return False
-    except Exception as e:
-        print(f"❌ Music Error: {e}")
-        return False
+    except: return False
 
-def generate_level_from_visual(theme, size=35): # Bumping up the grid size!
+def generate_level_from_visual(theme): 
     os.makedirs(GODOT_FOLDER, exist_ok=True)
     concept_path = os.path.join(GODOT_FOLDER, "concept_art.jpg")
     layout_path = os.path.join(GODOT_FOLDER, "layout.json")
     
-    print(f"🖼️  Artist: Drawing strictly top-down 2D map for '{theme}'...")
+    print(f"🖼️  Artist: Drawing a solid, high-contrast map for '{theme}'...")
     
-    artist_prompt = f"A strictly top-down 2D pixel-art map of a {theme}. Completely flat perspective, NO 3D, NO isometric angles. Clear vibrant zones. Looks like a retro 8-bit RPG map."
+    # Force the artist to make the volcano/landmarks massive and bold
+    artist_prompt = f"A strictly top-down 2D pixel-art map of {theme}. Solid chunky colors. 16:9 ratio. NO borders, NO text. LANDMARKS (Volcanoes/Buildings) must be HUGE and centered. Use high-contrast colors for lava/craters."
     
     try:
         image_res = client.models.generate_content(
@@ -51,19 +50,12 @@ def generate_level_from_visual(theme, size=35): # Bumping up the grid size!
         with open(concept_path, "wb") as f:
             f.write(img_data)
         
-        print(f"🗺️  Architect: Extracting exact colors and mapping to 3D grid...")
+        print(f"🗺️  Architect: Identifying landmarks and terrain heights...")
         
-        # Asking for the exact hex color from the image
-        architect_prompt = f"""Analyze this flat 2D top-down map. Divide it into a {size}x{size} grid.
-        Output ONLY raw JSON containing a 'title' string, and a 'grid' array.
-        The 'grid' MUST be a list of {size} lists (rows), each containing {size} objects (cells).
-        
-        Each cell must look exactly like this: {{"m": "material", "h": height, "c": "#hexcolor"}}
-        
-        Rules for extraction:
-        - "c" (Color): Sample the EXACT dominant hex color code from that sector of the image (e.g., if the tree is purple, use #800080. If water is bright blue, use #00AAFF).
-        - "h" (Height): Estimate 3D height. Water/Lava/Paths = 1, Flat Ground = 2, Trees/Hills = 3 to 4, Mountains = 5 to 8.
-        - "m" (Material): General category name (water, lava, grass, dirt, stone, wood, leaves).
+        # Stricter legend extraction
+        architect_prompt = f"""Identify the colors in this map. 
+        Assign heights: Water=1, Sand=1, Grass/Floor=2, Forests=4, Mountain/Volcano Base=6, Lava/Peak=8.
+        Output ONLY raw JSON list: [{{"hex": "#color", "h": height}}]
         """
 
         res = client.models.generate_content(
@@ -71,18 +63,45 @@ def generate_level_from_visual(theme, size=35): # Bumping up the grid size!
             contents=[
                 types.Part.from_bytes(data=img_data, mime_type="image/jpeg"),
                 types.Part.from_text(text=architect_prompt)
-            ]
+            ],
+            config=types.GenerateContentConfig(response_mime_type="application/json")
         )
         
-        raw_text = re.sub(r'```json|```', '', res.text).strip()
-        data = json.loads(raw_text)
+        legend = json.loads(res.text[res.text.find('['):res.text.rfind(']')+1])
+
+        print(f"📐 Python Builder: Clustering pixels for a solid landmass...")
         
+        image = Image.open(BytesIO(img_data))
+        # APPLY MEDIAN FILTER: This removes "noise" and groups colors into solid chunks
+        image = image.filter(ImageFilter.MedianFilter(size=5))
+        
+        GRID_W = 80 
+        GRID_H = int(GRID_W / (image.width / image.height))
+        
+        small_img = image.resize((GRID_W, GRID_H), Image.Resampling.NEAREST)
+        pixels = small_img.convert("RGB").load()
+        
+        grid_array = []
+        for y in range(GRID_H):
+            row = []
+            for x in range(GRID_W):
+                r, g, b = pixels[x, y]
+                best_h, best_hex, min_dist = 2, f"#{r:02x}{g:02x}{b:02x}", float('inf')
+                
+                for item in legend:
+                    ai_hex = item.get("hex", "#FFFFFF").lstrip('#')
+                    lr, lg, lb = tuple(int(ai_hex[i:i+2], 16) for i in (0, 2, 4))
+                    dist = (r-lr)**2 + (g-lg)**2 + (b-lb)**2
+                    if dist < min_dist:
+                        min_dist, best_h, best_hex = dist, item.get("h", 2), item.get("hex")
+                row.append([best_h, best_hex])
+            grid_array.append(row)
+
         with open(layout_path, "w") as f:
-            json.dump(data, f)
+            json.dump({"title": theme, "grid": grid_array}, f)
             
-        print(f"✅ Blueprint generated with exact colors!")
+        print(f"✅ Map built with clustered terrain!")
         return True
-        
     except Exception as e:
-        print(f"❌ Vision Error: {e}")
+        print(f"❌ Error: {e}")
         return False
