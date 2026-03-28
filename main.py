@@ -1,62 +1,25 @@
-import os
-import time
-from world_engine import GlobeGrid
-from agent_manager import get_tile_image, get_character_sprite, get_background_music
+from agent_manager import get_3d_texture
 
-def run_game():
-    print("\n🌟 --- THE ADAPTIVE GENERATIVE GLOBE --- 🌟")
+def main():
+    print("========================================")
+    print("🧙‍♂️ Welcome to the Gemini Dungeon Master 🧙‍♂️")
+    print("========================================")
+    print("Godot is waiting for your textures...\n")
     
-    current_theme = input("Describe your starting biome: ")
-    
-    while True: # Master World Loop
-        # 1. GENERATE THE ADAPTIVE HERO
-        try:
-            hero_img = get_character_sprite(current_theme)
-            hero_img.show()
-            print(f"✅ An explorer of the {current_theme} has appeared!")
-            print("⏳ Cooling down AI for 10 seconds...")
-            time.sleep(10) # Prevent 429 error before first move
-        except Exception as e:
-            print(f"⚠️ Hero generation failed: {e}")
-
-        game = GlobeGrid(size=10, theme=current_theme)
-        print(f"\n🌍 --- ENTERING: {current_theme} --- 🌍")
+    while True:
+        theme = input("Enter a new Dungeon Theme (or type 'q' to quit): ")
         
-        # 2. GENERATE MUSIC
-        try:
-            get_background_music(current_theme)
-        except:
-            pass
-
-        # 3. NAVIGATION LOOP
-        while len(game.inventory) < 3:
-            print(f"\n📍 Position: ({game.x}, {game.y}) | Keys Found: {len(game.inventory)}/3")
-            move = input("Move (north, south, east, west) or 'quit': ").lower()
-
-            if move == 'quit': return
-            if move in ["north", "south", "east", "west"]:
-                state = game.move(move)
-                try:
-                    img = get_tile_image(state['prompt'])
-                    img.show()
-                    
-                    if state['item_found']:
-                        print(f"🔑 YOU FOUND A KEY: {state['item_found']}!")
-                        game.inventory.append(state['item_found'])
-                except Exception as e:
-                    print(f"⚠️ AI Quota Hit. Wait 15s. Error: {e}")
-                    time.sleep(15)
-            else:
-                print("Invalid command.")
-
-        # 4. WIN & RESET
-        print(f"\n🎉 ALL KEYS COLLECTED! You have escaped the {current_theme}!")
-        choice = input("Enter a new biome? (y/n): ")
-        if choice.lower() == 'y':
-            current_theme = input("Describe the next biome: ")
-        else:
-            print("Safe travels, hero.")
+        if theme.lower() == 'q':
+            print("Shutting down...")
             break
+            
+        print(f"\n✨ Generating '{theme}' environment...")
+        
+        # Tell Gemini to make both textures
+        get_3d_texture(theme, "wall")
+        get_3d_texture(theme, "floor")
+        
+        print(f"\n🎉 Done! Go check Godot, the room should be updated!\n")
 
 if __name__ == "__main__":
-    run_game()
+    main()
