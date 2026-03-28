@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://cym1higahy1rw" path="res://dungeon_manager.gd" id="1_uslkq"]
 [ext_resource type="Script" uid="uid://b8x1pccfur64p" path="res://player.gd" id="2_rgjsm"]
+[ext_resource type="Script" uid="uid://cd4f8pfujot63" path="res://quit_button.gd" id="3_fipmq"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_fipmq"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -57,8 +58,4 @@ offset_bottom = 15.5
 grow_horizontal = 2
 grow_vertical = 2
 text = "Quit Game"
-
-[node name="OrbLabel" type="Label" parent="CanvasLayer" unique_id=1365218109]
-offset_right = 40.0
-offset_bottom = 23.0
-text = "Orb Counter "
+script = ExtResource("3_fipmq")
